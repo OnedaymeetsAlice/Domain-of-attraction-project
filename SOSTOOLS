@@ -1,1 +1,42 @@
 
+% DA问题 Van der pol circuit
+function [VX,DVX,Q] = DA_SOS_Test()
+clear all; clc; %echo on;
+
+% 声明符号变量(独立变量)
+pvar x1 x2; x = [x1;x2]; % 系统状态
+
+% sos初始化
+prog = sosprogram([x]); 
+
+% sos变量声明
+c = 0.5;
+[prog,vx] = sospolyvar(prog,monomials(x,[1,2]));
+[prog,dvx] = sospolyvar(prog,monomials(x,[1,2,3,4]));
+%[prog,epsx] = sospolyvar(prog,monomials(x,[1,2]));
+
+% 系统参数
+user_vx = x(1)^2 + x(1)*x(2) + x(2)^2;
+fx = [x(2);-x(1)-x(2)*(1-x(1)^2)];
+epsx = x(1)^2 + x(2)^2;
+epsx = 1e-12*epsx;
+user_dvx = [diff(user_vx,x(1)),diff(user_vx,x(2))]*fx;
+
+% SOS条件
+prog = soseq(prog,vx - user_vx); 
+%prog = sosineq(prog,c - vx); 
+prog = soseq(prog,dvx - user_dvx); 
+%prog = sosineq(prog,-(dvx + epsx)); 
+%prog = sosineq(prog,epsx); 
+
+% 设定目标函数
+%prog = sossetobj(prog,-c); % 优化目标函数
+
+% 调用sos_solver求解器求解sosp
+prog = sossolve(prog);
+
+% 返回sos_solver求解结果
+VX = sosgetsol(prog,vx);
+DVX = sosgetsol(prog,dvx);
+[Q,Z] = findsos(VX);
+end
